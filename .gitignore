@@ -19,7 +19,7 @@ __pycache__/
 
 # Media files
 media/exports/
-media/bulk_exports/
+media/bulk_uploads/
 media/*.pdf
 media/*.csv
 media/*.xlsx
