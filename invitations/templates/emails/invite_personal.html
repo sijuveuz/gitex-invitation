@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GITEX Invitation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    /* Basic reset */
+    body,table,td,a{ -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+    table,td{ mso-table-lspace:0pt; mso-table-rspace:0pt; }
+    img{ -ms-interpolation-mode:bicubic; }
+    img{ border:0; height:auto; line-height:100%; outline:none; text-decoration:none; }
+    table{ border-collapse:collapse !important; }
+    body{ margin:0; padding:0; width:100% !important; height:100% !important; font-family: Arial, Helvetica, sans-serif; background-color:#f4f4f6; color:#333333; }
+
+    /* Container */
+    .email-wrapper{ width:100%; padding:20px 12px; }
+    .email-content{ max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.08); }
+
+    /* Header */
+    .email-header{ padding:24px; text-align:left; background:linear-gradient(90deg,#0f62fe,#3ddc84); color:#ffffff; }
+    .brand{ font-size:20px; font-weight:700; letter-spacing:0.2px; }
+
+    /* Body */
+    .email-body{ padding:28px; }
+    .greeting{ font-size:18px; font-weight:600; margin:0 0 12px 0; }
+    .message{ font-size:15px; line-height:1.55; margin:0 0 18px 0; color:#444444; }
+    .personal-message{ padding:16px; background:#f7f8fa; border-radius:6px; font-size:14px; margin:0 0 18px 0; color:#333333; white-space:pre-wrap; }
+
+    /* CTA */
+    .cta{ display:inline-block; padding:12px 20px; background:#0f62fe; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:600; }
+    .muted{ color:#6b7280; font-size:13px; }
+
+    /* Footer */
+    .email-footer{ padding:18px 28px 28px 28px; font-size:12px; color:#8b8f95; text-align:center; }
+
+    /* Responsive */
+    @media only screen and (max-width:420px){
+      .email-body{ padding:18px; }
+      .email-header{ padding:18px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Preheader (hidden but useful for inbox preview) -->
+  <div style="display:none;max-height:0px;overflow:hidden;mso-hide:all;">
+    You're invited to GITEX — register now to save your spot. Expires: {{ expire_date }}
+  </div>
+
+  <div class="email-wrapper">
+    <div class="email-content" role="article" aria-label="GITEX invitation">
+      <div class="email-header">
+        <div class="brand">GITEX</div>
+      </div>
+
+      <div class="email-body">
+        <p class="greeting">Hi {{ guest_name }},</p>
+
+        <p class="message">
+          You're invited to <strong>GITEX</strong>. We’d be delighted if you could join us.
+        </p>
+
+        <p class="personal-message">{{ personal_message }}</p>
+
+        <p style="margin:0 0 18px 0;">
+          <a href="{{ invitation_url }}" class="cta" target="_blank" rel="noopener noreferrer">
+            Register for GITEX
+          </a>
+        </p>
+
+        <p class="muted" style="margin:0 0 8px 0;">
+          If the button doesn't work, copy & paste this link into your browser:
+        </p>
+        <p style="word-break:break-all; font-size:13px; margin:0 0 14px 0;">
+          <a href="{{ invitation_url }}" target="_blank" rel="noopener noreferrer">{{ invitation_url }}</a>
+        </p>
+
+        <p class="muted" style="margin:0 0 6px 0;">
+          This invitation expires: <strong>{{ expire_date }}</strong>
+        </p>
+      </div>
+
+      <div class="email-footer">
+        <div style="margin-bottom:10px;">Need help? Reply to this email and we'll assist.</div>
+        <div style="font-size:11px;">
+          © GITEX. All rights reserved.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

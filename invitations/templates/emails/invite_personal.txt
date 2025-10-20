@@ -1,0 +1,8 @@
+Hi {{ guest_name }},
+
+You are invited to GITEX. Use this link to register:
+{{ invitation_url }}
+
+Message: {{ personal_message }}
+
+Expires: {{ expire_date }}

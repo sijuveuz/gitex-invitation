@@ -1,0 +1,25 @@
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Django database
+db.sqlite3
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment files
+.env
+.env.*
+*.env
+
+
+
+# Media files
+media/exports/
+media/bulk_exports/
+media/*.pdf
+media/*.csv
+media/*.xlsx
