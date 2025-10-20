@@ -229,3 +229,24 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 #Add this for exports
 EXPORT_ROOT = os.path.join(BASE_DIR, 'exports')
 EXPORT_URL = '/exports/'
+
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler'},
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': '/home/veuz3/projects/gitex-invitation/logs/django.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
