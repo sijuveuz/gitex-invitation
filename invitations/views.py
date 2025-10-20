@@ -20,7 +20,7 @@ from .helpers.bulk_helpers.bulk_row_delete_helper import handle_bulk_row_delete
 from .helpers.bulk_helpers.bulk_job_status_helper import handle_bulk_job_status
 from .helpers.invitation_helpers.invitation_list_helper import handle_invitation_list
 from .helpers.invitation_helpers.invitation_link_generate_helper import handle_invitation_link_generate
-from .helpers.invite_confirmaion_helper.register_from_link_view import handle_register_from_link
+from .helpers.invite_confirmaion.register_from_link_view import handle_register_from_link
 from .helpers.invitation_helpers.generate_invitation_link_details_helper import handle_generate_invitation_link_details
 from .helpers.invitation_helpers.invitation_detail_by_id_helper import handle_invitation_detail_by_id
 from .helpers.invitation_helpers.invitation_edit_helper import handle_invitation_edit
@@ -193,7 +193,7 @@ class InvitationDetailView(APIView):
 
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
-from invitations.helpers.invite_confirmaion_helper  .invitation_confirm_helper import handle_invitation_confirm
+from invitations.helpers.invite_confirmaion.invitation_confirm_helper import handle_invitation_confirm
 
 
 class InvitationConfirmView(APIView):
@@ -227,6 +227,7 @@ class RegisterFromLinkView(APIView):
     """
     permission_classes = [AllowAny]
 
+    @transaction.atomic
     def post(self, request):
         return handle_register_from_link(request)
 

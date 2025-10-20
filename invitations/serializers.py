@@ -107,6 +107,7 @@ class InvitationListSerializer(serializers.ModelSerializer):
 
 
 class InvitationDetailSerializer(serializers.ModelSerializer):
+    ticket_type = TicketTypeSerializer()
     class Meta:
         model = Invitation
         fields = (

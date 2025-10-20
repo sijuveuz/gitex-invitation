@@ -16,7 +16,7 @@ def handle_register_from_link(request):
             {"status": "error", "message": "Invalid data", "errors": serializer.errors},
             status=status.HTTP_400_BAD_REQUEST,
         )
-
+    
     usage = serializer.save()
 
     return Response(
