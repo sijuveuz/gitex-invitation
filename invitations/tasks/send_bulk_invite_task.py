@@ -28,7 +28,7 @@ def send_bulk_invite(self, job_id, expire_date, default_message):
         created_total = 0
         pending_total = 0
 
-        BASE_URL = config("FRONTEND_INVITE_URL", "http://localhost:3000/invite/")
+        BASE_URL = config("FRONTEND_INVITE_URL", "http://178.18.253.63:3010/invite/")
         ticket_map = {t.name.lower(): t.id for t in TicketType.objects.filter(is_active=True)}
 
         stats, _ = InvitationStats.objects.get_or_create(user=job.user)

@@ -135,7 +135,7 @@ class InvitationLinkGenerateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context["request"].user
-        base_url = config("FRONTEND_URL", "http://localhost:3000/invite/register")
+        base_url = config("FRONTEND_URL", "http://178.18.253.63:3010/invite/register")
         links_needed = validated_data.pop("links_needed", 1)
 
         stats, _ = InvitationStats.objects.get_or_create(user=user)
