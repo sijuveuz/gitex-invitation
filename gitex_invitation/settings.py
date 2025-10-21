@@ -190,6 +190,14 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
+CELERY_QUEUES = {
+    "veuz3_queue": {
+        "exchange": "veuz3_queue",
+        "routing_key": "veuz3_queue",
+    },
+}
+
+CELERY_TASK_DEFAULT_QUEUE = "veuz3_queue"
 
 CACHES = {
     "default": {
