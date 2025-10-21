@@ -33,6 +33,16 @@ CACHES = {
     }
 }
 
+
+CELERY_QUEUES = {
+    "veuz3_queue": {
+        "exchange": "veuz3_queue",
+        "routing_key": "veuz3_queue",
+    },
+}
+
+CELERY_TASK_DEFAULT_QUEUE = "veuz3_queue"
+
 # LOGGING = {
 #     'version': 1,
 #     'disable_existing_loggers': True,
