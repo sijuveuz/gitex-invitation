@@ -20,7 +20,7 @@ class UserRegistrationView(APIView):
 
         if serializer.is_valid():
             user, tokens = create_user_and_tokens(serializer.validated_data)
-
+            
             response_data = {
                 "status": "success",
                 "message": "User registered successfully.",

@@ -14,7 +14,7 @@ def create_user_and_tokens(validated_data):
     # Check if user already exists 
     email = validated_data["email"]
     if User.objects.filter(email=email).exists():
-        raise ValueError("A user with this email already exists.")
+        raise ValueError("Email already exists.") 
 
     with transaction.atomic():
         user = User.objects.create_user(

@@ -90,7 +90,11 @@ def handle_bulk_row_patch(request, job_id, row_id):
 
     # Get updated stats
     stats = get_stats(job_id)
-
+    BulkUploadJob.objects.filter(id=job_id).update(
+        total_count=stats["total_count"],
+        valid_count=stats["valid_count"],
+        invalid_count=stats["invalid_count"]
+    )
     return Response(
         {
             "status": "success",
