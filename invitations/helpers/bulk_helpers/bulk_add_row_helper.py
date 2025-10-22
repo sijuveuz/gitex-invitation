@@ -3,6 +3,8 @@ from rest_framework import status
 from invitations.models import BulkUploadJob, Invitation
 from invitations.utils.redis_utils import push_row, get_stats, set_stats, range_rows
 from invitations.helpers.bulk_helpers.bulk_validator import load_ticket_types_cache, validate_row_csv_dict
+from invitations.utils.bulk_email_uniqueness_validator import load_ticket_email_validation_context
+
 
 def handle_bulk_add_row(request, job_id):
     """Handles adding a single row to an existing bulk upload job."""
@@ -24,23 +26,40 @@ def handle_bulk_add_row(request, job_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    load_ticket_types_cache()
+    # --- Load global & ticket-level context once ---
+    global_unique_enabled, ticket_cache = load_ticket_email_validation_context()
 
-    existing_invites = set(
-        Invitation.objects.filter(user=request.user)
-        .values_list("guest_email", "ticket_type__name")
+    # --- Prepare DB-level duplicate maps ---
+    existing_global = set()
+    existing_ticket = set()
+
+    invitations_qs = Invitation.objects.filter(user=request.user).values_list(
+        "guest_email", "ticket_type__name"
     )
+    for email, ticket_name in invitations_qs:
+        if email:
+            existing_global.add(email.lower())
+        if email and ticket_name:
+            existing_ticket.add((email.lower(), ticket_name.lower()))
 
+    # --- Prepare file-level duplicate maps ---
     existing_rows = range_rows(job_id)
-    seen_file_duplicates = {
-        (r["guest_email"].lower(), r["ticket_type"].lower()): r["row_number"]
-        for r in existing_rows
-    }
+    seen_global_dupes = {}
+    seen_ticket_dupes = {}
 
-    # Assign next id and row_number
+    for r in existing_rows:
+        email = (r.get("guest_email") or "").lower()
+        ticket = (r.get("ticket_type") or "").lower()
+        if email:
+            seen_global_dupes[email] = r["row_number"]
+        if email and ticket:
+            seen_ticket_dupes[(email, ticket)] = r["row_number"]
+
+    # --- Assign next row id & number ---
     next_id = max((r["id"] for r in existing_rows), default=0) + 1
     next_row_number = max((r["row_number"] for r in existing_rows), default=0) + 1
 
+    # --- Build CSV-like row for validation ---
     csv_like = {
         "Full Name": data.get("guest_name", ""),
         "Email": data.get("guest_email", ""),
@@ -49,11 +68,16 @@ def handle_bulk_add_row(request, job_id):
         "Personal Message": data.get("personal_message", ""),
     }
 
+    # --- Run the unified validator ---
     new_row_obj, errors = validate_row_csv_dict(
         csv_like,
         next_row_number,
-        existing_invites=existing_invites,
-        seen_file_duplicates=seen_file_duplicates,
+        existing_global=existing_global,
+        existing_ticket=existing_ticket,
+        seen_global_dupes=seen_global_dupes,
+        seen_ticket_dupes=seen_ticket_dupes,
+        ticket_cache=ticket_cache,
+        global_unique_enabled=global_unique_enabled,
     )
     new_row_obj["id"] = next_id
 

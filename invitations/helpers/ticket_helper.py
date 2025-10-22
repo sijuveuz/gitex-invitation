@@ -1,5 +1,5 @@
 from django.core.cache import cache
-from ..models import TicketType
+from adminapp.models import TicketType
 
 def get_active_ticket_types():
     # key = "ticket_types_active_v1"

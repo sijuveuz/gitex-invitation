@@ -1,5 +1,6 @@
 from celery import shared_task
-from invitations.models import BulkUploadJob, Invitation, TicketType, InvitationStats
+from invitations.models import BulkUploadJob, Invitation, InvitationStats
+from adminapp.models import TicketType
 from invitations.utils.redis_utils import get_redis, delete_rows_key
 import orjson
 import uuid
@@ -91,18 +92,18 @@ def send_bulk_invite(self, job_id, expire_date, default_message):
             stats.save(update_fields=["generated_invitations", "remaining_invitations"])
 
             self.update_state(state="PROGRESS", meta={"created": created_total, "pending": pending_total})
-            print(f"✅ Created {created_total} active, {pending_total} pending so far...")
+            print(f"Created {created_total} active, {pending_total} pending so far...")
 
         # Mark job as complete
         job.status = BulkUploadJob.STATUS_COMPLETED
         job.save(update_fields=["status", "updated_at"])
         delete_rows_key(job_id)
 
-        print(f"🎯 Job {job_id} completed — {created_total} active, {pending_total} pending.")
+        print(f"Job {job_id} completed — {created_total} active, {pending_total} pending.")
         return {"created": created_total, "pending": pending_total}
 
     except Exception as e:
-        print(f"❌ Error in bulk job {job_id}: {e}")
+        print(f"Error in bulk job {job_id}: {e}")
         job = BulkUploadJob.objects.filter(id=job_id).first()
         if job:
             job.status = BulkUploadJob.STATUS_FAILED

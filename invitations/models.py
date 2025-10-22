@@ -4,23 +4,6 @@ from django.db import models
 import uuid
 
 
-class TicketType(models.Model):
-    """
-    Represents available ticket types for invitations (Visitor, VIP, etc.)
-    """
-    name = models.CharField(max_length=50, unique=True, db_index=True)
-    description = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-
 class InvitationStats(models.Model):
     """
     Tracks invitation metrics for each registered user.
@@ -76,8 +59,12 @@ class Invitation(models.Model):
     company_name = models.CharField(max_length=255, blank=True, null=True)
     personal_message = models.TextField(blank=True, null=True)
 
+    #tracking email - 
+    # global_unique_enforced = models.BooleanField(default=False)
+    # ticket_unique_enforced = models.BooleanField(default=False)
+
     # Invitation configuration
-    ticket_type = models.ForeignKey("invitations.TicketType", on_delete=models.PROTECT)
+    ticket_type = models.ForeignKey("adminapp.TicketType", on_delete=models.PROTECT)
     expire_date = models.DateField()
     source_type = models.CharField(max_length=20, choices=SOURCE_CHOICES)
     link_code = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
@@ -95,13 +82,13 @@ class Invitation(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
-        constraints = [
-            models.UniqueConstraint(
-                fields=["user", "guest_email", "ticket_type"],
-                name="unique_invite_per_guest_per_ticket",
-                condition=~models.Q(guest_email__isnull=True),
-            ),
-        ]
+        # constraints = [
+        #     models.UniqueConstraint(
+        #         fields=["user", "guest_email", "ticket_type"],
+        #         name="unique_invite_per_guest_per_ticket",
+        #         condition=~models.Q(guest_email__isnull=True),
+        #     ),
+        # ]
 
         indexes = [
             models.Index(fields=["user", "guest_email"]),

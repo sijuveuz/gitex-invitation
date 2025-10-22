@@ -2,7 +2,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from invitations.models import BulkUploadJob, Invitation
 from invitations.utils.redis_utils import range_rows, update_row, get_stats, incr_stats
-from invitations.helpers.bulk_helpers.bulk_validator import validate_row_csv_dict, load_ticket_types_cache
+from invitations.helpers.bulk_helpers.bulk_validator import load_ticket_types_cache, validate_row_csv_dict
+from invitations.utils.bulk_email_uniqueness_validator import load_ticket_email_validation_context
 
 def handle_bulk_row_patch(request, job_id, row_id):
     """Handles PATCH logic for updating a single row by id."""
@@ -31,20 +32,26 @@ def handle_bulk_row_patch(request, job_id, row_id):
         if k in edits:
             current_row[k] = edits[k]
 
-    load_ticket_types_cache()
+    # load_ticket_types_cache()
 
-    existing_invites = set(
-        Invitation.objects.filter(user=request.user)
-        .values_list("guest_email", "ticket_type__name", "user")
-    )
+    # existing_invites = set(
+    #     Invitation.objects.filter(user=request.user)
+    #     .values_list("guest_email", "ticket_type__name", "user")
+    # )
 
-    # Build duplicate map excluding current row
+# --- Prepare file-level duplicate maps (excluding current row) ---
     all_rows = range_rows(job_id)
-    seen_file_duplicates = {
-        (r["guest_email"].lower(), r["ticket_type"].lower()): r["row_number"]
-        for r in all_rows
-        if r["id"] != row_id
-    }
+    seen_global_dupes = {}
+    seen_ticket_dupes = {}
+    for r in all_rows:
+        if r["id"] == row_id:
+            continue
+        email = (r.get("guest_email") or "").lower()
+        ticket = (r.get("ticket_type") or "").lower()
+        if email:
+            seen_global_dupes[email] = r["row_number"]
+        if email and ticket:
+            seen_ticket_dupes[(email, ticket)] = r["row_number"]
 
     csv_like = {
         "Full Name": current_row.get("guest_name", ""),
@@ -53,12 +60,28 @@ def handle_bulk_row_patch(request, job_id, row_id):
         "Company": current_row.get("company", ""),
         "Personal Message": current_row.get("personal_message", ""),
     }
-
+    global_unique_enabled, ticket_cache = load_ticket_email_validation_context()
+    # --- Prepare DB-level duplicate maps ---
+    existing_global = set()
+    existing_ticket = set()
+    invitations_qs = Invitation.objects.filter(user=request.user).values_list(
+    "guest_email", "ticket_type__name"
+)
+    for email, ticket_name in invitations_qs:
+        if email:
+            existing_global.add(email.lower())
+        if email and ticket_name:
+            existing_ticket.add((email.lower(), ticket_name.lower()))
     new_row_obj, _ = validate_row_csv_dict(
         csv_like,
-        current_row["row_number"],  # Keep row_number for errors
-        existing_invites=existing_invites,
-        seen_file_duplicates=seen_file_duplicates,
+        current_row["row_number"],
+        existing_global=existing_global,
+        existing_ticket=existing_ticket,
+        ticket_cache=ticket_cache,
+        global_unique_enabled=global_unique_enabled,
+        seen_global_dupes=seen_global_dupes,
+        seen_ticket_dupes=seen_ticket_dupes, 
+
     )
     new_row_obj["id"] = row_id  # Preserve id
 

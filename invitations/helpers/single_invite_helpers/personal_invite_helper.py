@@ -1,11 +1,15 @@
 from django.db import transaction
-from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from invitations.models import Invitation, InvitationStats, TicketType
-import uuid
+from invitations.models import Invitation, InvitationStats
+from adminapp.models import TicketType
 from decouple import config
 from invitations.utils.exceptions import extract_validation_message
+from invitations.utils.decorators import validate_email_uniqueness
+from invitations.serializers import PersonalizedInvitationSerializer
 
+@validate_email_uniqueness 
 def create_personal_invitation(user, data):
     """
     Atomic: checks quota, creates Invitation, updates stats.
@@ -21,16 +25,16 @@ def create_personal_invitation(user, data):
             "detail": f"Invalid ticket type '{data['ticket_type']}'. Please select a valid option."
         })
 
-    existing = Invitation.objects.filter(
-        user=user,
-        guest_email=email,
-        ticket_type=ticket_type_obj
-    ).first()
+    # existing = Invitation.objects.filter(
+    #     user=user,
+    #     guest_email=email,
+    #     ticket_type=ticket_type_obj
+    # ).first()
 
-    if existing:
-        raise ValidationError({
-            "detail": f"An invitation for '{email}' already exists with Ticket class '{data['ticket_type']}'."
-        })
+    # if existing:
+    #     raise ValidationError({
+    #         "detail": f"An invitation for '{email}' already exists with Ticket class '{data['ticket_type']}'."
+    #     })
 
     with transaction.atomic():
         stats = InvitationStats.objects.select_for_update().get(user=user)
@@ -66,10 +70,7 @@ def create_personal_invitation(user, data):
 
     return invitation, True
 
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.exceptions import ValidationError
-from invitations.serializers import PersonalizedInvitationSerializer
+
 
 def handle_send_personal_invitation(request):
     """

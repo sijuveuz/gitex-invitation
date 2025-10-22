@@ -4,9 +4,10 @@ from decouple import config
 from django.db import transaction
 from uuid import uuid4
 
+from adminapp.models import TicketType
 from .models import Invitation
 from invitations.models import (
-    TicketType, InvitationStats, 
+    InvitationStats, 
     BulkUploadJob, InvitationLinkUsage
                                 )
 
@@ -61,8 +62,6 @@ class PersonalizedInvitationSerializer(serializers.ModelSerializer):
 
 class BulkUploadCreateSerializer(serializers.Serializer):
     file = serializers.FileField()
-    # default_personal_message = serializers.CharField(required=False, allow_blank=True, max_length=500)
-    # expire_date = serializers.DateField(required=True)
 
 class BulkUploadJobSerializer(serializers.ModelSerializer):
     class Meta:
