@@ -10,12 +10,13 @@ def delete_invitation_helper(user, invitation_id):
     - If usage_count == 0 → hard delete
     Updates InvitationStats accordingly.
     """
-    try:
-        invitation = Invitation.objects.select_for_update().get(id=invitation_id, user=user)
-    except Invitation.DoesNotExist:
-        raise ValidationError({"detail": "Invitation not found."})
-
     with transaction.atomic():
+        try:
+            invitation = Invitation.objects.select_for_update().get(id=invitation_id, user=user)
+        except Invitation.DoesNotExist:
+            raise ValidationError({"detail": "Invitation not found."})
+
+
         stats = InvitationStats.objects.select_for_update().get(user=user)
 
         # 🟡 CASE 1: SOFT DELETE (already used or partially used)

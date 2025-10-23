@@ -9,7 +9,7 @@ from invitations.utils.exceptions import extract_validation_message
 from invitations.utils.decorators import validate_email_uniqueness
 from invitations.serializers import PersonalizedInvitationSerializer
 
-@validate_email_uniqueness 
+@validate_email_uniqueness
 def create_personal_invitation(user, data):
     """
     Atomic: checks quota, creates Invitation, updates stats.
@@ -19,8 +19,11 @@ def create_personal_invitation(user, data):
 
     # try:
     try:
-        ticket_type_obj = TicketType.objects.get(name=data["ticket_type"])
+        ticket_type_obj = data["ticket_type"]
+        if isinstance(ticket_type_obj, str):
+            ticket_type_obj = TicketType.objects.get(name=ticket_type_obj)
     except TicketType.DoesNotExist:
+        print(""""TICKET NOT FOUND""")
         raise ValidationError({
             "detail": f"Invalid ticket type '{data['ticket_type']}'. Please select a valid option."
         })
