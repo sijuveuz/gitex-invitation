@@ -1,5 +1,7 @@
 from rest_framework.response import Response
 from rest_framework import status
+from threading import Lock
+
 from invitations.models import BulkUploadJob, Invitation
 from invitations.utils.redis_utils import range_rows, update_row, get_stats, incr_stats
 from invitations.helpers.bulk_helpers.bulk_validator import load_ticket_types_cache, validate_row_csv_dict
@@ -39,10 +41,14 @@ def handle_bulk_row_patch(request, job_id, row_id):
     #     .values_list("guest_email", "ticket_type__name", "user")
     # )
 
-# --- Prepare file-level duplicate maps (excluding current row) ---
+    # --- Prepare file-level duplicate maps (excluding current row) ---
     all_rows = range_rows(job_id)
+
+    # file-level duplicate trackers (thread-safe)
     seen_global_dupes = {}
     seen_ticket_dupes = {}
+    seen_lock = Lock()
+
     for r in all_rows:
         if r["id"] == row_id:
             continue
@@ -81,6 +87,7 @@ def handle_bulk_row_patch(request, job_id, row_id):
         global_unique_enabled=global_unique_enabled,
         seen_global_dupes=seen_global_dupes,
         seen_ticket_dupes=seen_ticket_dupes, 
+        seen_lock=seen_lock
 
     )
     new_row_obj["id"] = row_id  # Preserve id

@@ -1,7 +1,5 @@
 import csv
-import os
 # import json
-import uuid
 from celery import shared_task, current_task
 from adminapp.models import TicketType
 from invitations.models import BulkUploadJob, Invitation, InvitationStats
@@ -9,8 +7,7 @@ from invitations.utils.redis_utils import push_row, incr_stats, set_stats, set_s
 # from invitations.helpers.bulk_helpers.bulk_validator import validate_row_csv_dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import math
-import csv, json
-from io import TextIOWrapper
+import csv
 
 
 import csv

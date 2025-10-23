@@ -1,5 +1,7 @@
 from rest_framework.response import Response
 from rest_framework import status
+from threading import Lock
+
 from invitations.models import BulkUploadJob, Invitation
 from invitations.utils.redis_utils import push_row, get_stats, set_stats, range_rows
 from invitations.helpers.bulk_helpers.bulk_validator import load_ticket_types_cache, validate_row_csv_dict
@@ -44,8 +46,10 @@ def handle_bulk_add_row(request, job_id):
 
     # --- Prepare file-level duplicate maps ---
     existing_rows = range_rows(job_id)
+    # file-level duplicate trackers (thread-safe)
     seen_global_dupes = {}
     seen_ticket_dupes = {}
+    seen_lock = Lock()
 
     for r in existing_rows:
         email = (r.get("guest_email") or "").lower()
@@ -78,6 +82,7 @@ def handle_bulk_add_row(request, job_id):
         seen_ticket_dupes=seen_ticket_dupes,
         ticket_cache=ticket_cache,
         global_unique_enabled=global_unique_enabled,
+        seen_lock=seen_lock
     )
     new_row_obj["id"] = next_id
 
@@ -89,7 +94,7 @@ def handle_bulk_add_row(request, job_id):
                 "errors": new_row_obj.get("errors", {}),
             },
             status=status.HTTP_400_BAD_REQUEST,
-        )
+        ) 
 
     push_row(job_id, new_row_obj)
 

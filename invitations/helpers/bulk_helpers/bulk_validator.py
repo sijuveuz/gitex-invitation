@@ -91,9 +91,12 @@ def validate_row_csv_dict(
         enforce_unique = ticket_type_obj.get("enforce_unique_email", False)
         key_ticket = (email, ticket_norm)
         key_global = email
+        print("KEY GLOBAL", key_global)
+        print("KEY TICKET", key_ticket)
 
         # --- DB-level (existing) duplicates ---
         if global_unique_enabled:
+            print("GLOBAL  - DB level UNIQ ENFORCED", global_unique_enabled)
             if key_global in existing_global:
                 duplicate_db = True
                 errors["duplicate"] = "Duplicate invitation for this email globally."
