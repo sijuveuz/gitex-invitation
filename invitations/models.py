@@ -79,6 +79,7 @@ class Invitation(models.Model):
     registered = models.BooleanField(default=False)
     link_is_active = models.BooleanField(default=True)
     link_limit_reached = models.BooleanField(default=True)
+    is_sent = models.BooleanField(default=False)
     class Meta:
         ordering = ["-created_at"]
 

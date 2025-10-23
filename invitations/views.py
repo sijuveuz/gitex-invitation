@@ -379,3 +379,6 @@ class InvitationExportDownloadView(APIView):
             raise Http404("File not found")
         response = FileResponse(open(file_path, "rb"), as_attachment=True)
         return response
+    
+
+

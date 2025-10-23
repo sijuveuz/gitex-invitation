@@ -47,31 +47,38 @@ def create_personal_invitation(user, data):
                 "detail": "You have reached your invitation limit."
             })
         FRONTEND_INVITE_URL =  config('FRONTEND_INVITE_URL')
-        invitation = Invitation.objects.create(
-            user=user,
-            guest_name=data["guest_name"],
-            guest_email=email,
-            company_name=data.get("company_name"),
-            personal_message=data.get("personal_message", ""),
-            ticket_type=ticket_type_obj, 
-            expire_date=data["expire_date"],
-            source_type="personal",
-            # link_code=,
-            # invitation_url=None,
-            usage_limit=1,
-            usage_count=0,
-            status="active",
-        )
-        invitation.invitation_url = f'{FRONTEND_INVITE_URL}{str(invitation.link_code)}/'
-        stats.generated_invitations += 1 
-        stats.remaining_invitations = max(
-            stats.allocated_invitations - stats.generated_invitations, 0
-        )
-        stats.save(update_fields=["generated_invitations", "remaining_invitations"])
-        invitation.status = 'active'
-        invitation.save()
+        try:
+            invitation = Invitation.objects.create(
+                user=user,
+                guest_name=data["guest_name"],
+                guest_email=email,
+                company_name=data.get("company_name"),
+                personal_message=data.get("personal_message", ""),
+                ticket_type=ticket_type_obj, 
+                expire_date=data["expire_date"],
+                source_type="personal",
+                # link_code=,
+                # invitation_url=None,
+                usage_limit=1,
+                usage_count=0,
+                status="active",
+                is_sent=True
+            )
+            invitation.invitation_url = f'{FRONTEND_INVITE_URL}{str(invitation.link_code)}/'
+            stats.generated_invitations += 1 
+            stats.remaining_invitations = max(
+                stats.allocated_invitations - stats.generated_invitations, 0
+            )
+            stats.save(update_fields=["generated_invitations", "remaining_invitations"])
+            invitation.status = 'active'
+            invitation.save()
+        except Exception as e: 
+            invitation.status = "pending"
+            invitation.is_sent = False
+            invitation.save(force_insert=True)
 
     return invitation, True
+
 
 
 

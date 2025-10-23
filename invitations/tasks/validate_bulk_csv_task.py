@@ -67,10 +67,10 @@ def validate_csv_file_task(self, job_id, default_message=None):
     pipe = r.pipeline(transaction=False)
 
     # --- Preload all reusable data (1x DB hits only) ---
-    ticket_cache = {
-        t.name.lower(): t
-        for t in TicketType.objects.filter(is_active=True)
-    }
+    # ticket_cache = {
+    #     t.name.lower(): t
+    #     for t in TicketType.objects.filter(is_active=True)
+    # }
 
     existing_raw = Invitation.objects.filter(user=job.user).values_list(
         "guest_email", "ticket_type__name"
