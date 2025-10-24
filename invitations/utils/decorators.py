@@ -20,7 +20,7 @@ def validate_email_uniqueness(func):
         if not email or not ticket_field:
             return func(user, data, *args, **kwargs)
 
-        # 🧩 Handle both string and object cases
+        # Handle both string and object cases
         if isinstance(ticket_field, TicketType):
             ticket_type = ticket_field
         else:
@@ -29,8 +29,8 @@ def validate_email_uniqueness(func):
             except TicketType.DoesNotExist:
                 raise ValidationError({"detail": f"Invalid ticket type '{ticket_field}'."})
 
-        # ✅ Reuse the same uniqueness logic
-        is_valid, msg, scope = check_email_uniqueness(user, email, ticket_type)
+        # Reuse the same uniqueness logic
+        is_valid, msg, scope = check_email_uniqueness(email, ticket_type)
         if not is_valid:
             raise ValidationError({"guest_email": msg})
  

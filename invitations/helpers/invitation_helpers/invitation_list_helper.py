@@ -11,7 +11,7 @@ def handle_invitation_list(request):
     for the authenticated user.
     """
     user = request.user
-    qs = Invitation.objects.filter(user=user, link_is_active=True).select_related("ticket_type")
+    qs = Invitation.objects.filter(link_is_active=True).select_related("ticket_type")
     filtered_qs = apply_invitation_filters(qs, request.query_params)
 
     paginator = StandardResultsSetPagination()

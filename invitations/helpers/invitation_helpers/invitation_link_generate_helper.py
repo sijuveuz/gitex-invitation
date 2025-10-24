@@ -21,7 +21,7 @@ def handle_invitation_link_generate(request):
     serializer.save()
 
     # Fetch or create invitation stats
-    invitation_stats, _ = InvitationStats.objects.get_or_create(user=request.user)
+    invitation_stats, _ = InvitationStats.objects.get_or_create(id=1)
     stats_serializer = InvitationStatsSerializer(invitation_stats)
 
     return Response(

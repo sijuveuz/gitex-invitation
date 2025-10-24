@@ -34,13 +34,6 @@ def handle_bulk_row_patch(request, job_id, row_id):
         if k in edits:
             current_row[k] = edits[k]
 
-    # load_ticket_types_cache()
-
-    # existing_invites = set(
-    #     Invitation.objects.filter(user=request.user)
-    #     .values_list("guest_email", "ticket_type__name", "user")
-    # )
-
     # --- Prepare file-level duplicate maps (excluding current row) ---
     all_rows = range_rows(job_id)
 
@@ -66,7 +59,7 @@ def handle_bulk_row_patch(request, job_id, row_id):
         "Company": current_row.get("company", ""),
         "Personal Message": current_row.get("personal_message", ""),
     }
-    global_unique_enabled, ticket_cache = load_ticket_email_validation_context()
+    ticket_cache = load_ticket_email_validation_context()
     # --- Prepare DB-level duplicate maps ---
     existing_global = set()
     existing_ticket = set()
@@ -84,23 +77,13 @@ def handle_bulk_row_patch(request, job_id, row_id):
         existing_global=existing_global,
         existing_ticket=existing_ticket,
         ticket_cache=ticket_cache,
-        global_unique_enabled=global_unique_enabled,
+        # global_unique_enabled=global_unique_enabled,
         seen_global_dupes=seen_global_dupes,
         seen_ticket_dupes=seen_ticket_dupes, 
         seen_lock=seen_lock
 
     )
     new_row_obj["id"] = row_id  # Preserve id
-
-    # if new_row_obj.get("file_level_duplicate") or new_row_obj.get("duplicate"):
-    #     return Response(
-    #         {
-    #             "status": "error",
-    #             "message": "Duplicate entry detected (email + ticket type already exists).",
-    #             "errors": new_row_obj.get("errors", {}),
-    #         },
-    #         status=status.HTTP_400_BAD_REQUEST,
-    #     )
 
     # Update stats if status changes
     old_status = current_row["status"]

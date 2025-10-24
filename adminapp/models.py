@@ -1,4 +1,6 @@
 from django.db import models
+from django.core.exceptions import ValidationError
+
 from invitations.models import BulkUploadJob
 from accounts.models import User 
 
@@ -21,15 +23,28 @@ class TicketType(models.Model):
     
 
 class InvitationSettings(models.Model):
-    """
-    Global invitation configuration.
-    Controls whether guest emails must be unique globally.
-    """
     enforce_global_unique = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def save(self, *args, **kwargs):
+        # Enforce only one instance
+        if not self.pk and InvitationSettings.objects.exists():
+            raise ValidationError("Only one InvitationSettings instance is allowed.")
+
+        # Get original value before save
+        old_value = None
+        if self.pk:
+            old_value = InvitationSettings.objects.get(pk=self.pk).enforce_global_unique
+
+        super().save(*args, **kwargs)
+
+        # If enforce_global_unique is turned ON
+        if old_value is False and self.enforce_global_unique is True:
+            TicketType.objects.update(enforce_unique_email=True)
+
     def __str__(self):
         return f"Global Unique: {self.enforce_global_unique}"
+
 
 
 

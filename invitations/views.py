@@ -24,7 +24,7 @@ from .helpers.invite_confirmaion.register_from_link_view import handle_register_
 from .helpers.invitation_helpers.generate_invitation_link_details_helper import handle_generate_invitation_link_details
 from .helpers.invitation_helpers.invitation_detail_by_id_helper import handle_invitation_detail_by_id
 from .helpers.dash_helpers.invitation_edit_helper import handle_invitation_edit
-from .helpers.single_invite_helpers.personal_invite_helper import handle_send_personal_invitation
+from .helpers.personal_invite_helpers.personal_invite_helper import handle_send_personal_invitation
 from .helpers.bulk_helpers.bulk_upload_helper import handle_bulk_upload
 from .helpers.dash_helpers.invitation_stats_helper import handle_invitation_stats_request
 
@@ -216,6 +216,7 @@ class GenerateInvitationLinkView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic()
     def post(self, request):
         return handle_invitation_link_generate(request)
 

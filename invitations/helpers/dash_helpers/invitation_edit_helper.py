@@ -13,7 +13,7 @@ def handle_invitation_edit(request, pk):
     data = request.data
 
     try:
-        invitation = Invitation.objects.get(id=pk, user=user)
+        invitation = Invitation.objects.get(id=pk)
     except Invitation.DoesNotExist:
         return Response(
             {"status": "error", "message": "Invitation not found."},
@@ -31,7 +31,7 @@ def handle_invitation_edit(request, pk):
 
     for field in editable_fields:
         if field in data and data[field] not in [None, ""]:
-            # ✅ Handle foreign key (ticket_type) properly
+            #Handle foreign key (ticket_type) properly
             if field == "ticket_type":
                 ticket_value = data.get("ticket_type")
 

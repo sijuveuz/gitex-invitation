@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from invitations.models import Invitation, InvitationLinkUsage, InvitationStats
+from invitations.utils.email_uniqueness_validator import check_email_uniqueness
 
 
 from django.db import transaction
@@ -15,7 +16,7 @@ def broadcast_invitation_helper(user, data):
 
     with transaction.atomic():
         try:
-            invitation = Invitation.objects.select_for_update().get(id=invitation_id, user=user)
+            invitation = Invitation.objects.select_for_update().get(id=invitation_id)
         except Invitation.DoesNotExist:
             raise ValidationError({"detail": "Invitation not found."})
 
@@ -27,6 +28,11 @@ def broadcast_invitation_helper(user, data):
             if not guest_name or not guest_email:
                 raise ValidationError({"detail": "Guest name and email are required for link invitations."})
 
+            ticket_type = invitation.ticket_type
+            is_valid, msg, scope = check_email_uniqueness(guest_email, ticket_type)
+            if not is_valid:
+                raise ValidationError({"detail": msg})
+            
             usage, created = InvitationLinkUsage.objects.get_or_create(
                 link=invitation,
                 guest_email=guest_email,
@@ -50,21 +56,21 @@ def broadcast_invitation_helper(user, data):
                 "guest_email": guest_email,
             }
 
-        # --- PERSONAL / BULK FLOW ---
-        elif source_type in ["personal", "bulk"]:
-            editable_fields = ["guest_name", "company_name", "personal_message", "expire_date", "ticket_type"]
-            for field in editable_fields:
-                if field in data:
-                    setattr(invitation, field, data[field])
+        # # --- PERSONAL / BULK FLOW ---
+        # elif source_type in ["personal", "bulk"]:
+        #     editable_fields = ["guest_name", "company_name", "personal_message", "expire_date", "ticket_type"]
+        #     for field in editable_fields:
+        #         if field in data:
+        #             setattr(invitation, field, data[field])
 
-            invitation.save(update_fields=editable_fields + ["updated_at"])
-            print(f"📧 Queued resend email to {invitation.guest_email}")
+        #     invitation.save(update_fields=editable_fields + ["updated_at"])
+        #     print(f"📧 Queued resend email to {invitation.guest_email}")
 
-            return {
-                "action": "invitation_updated",
-                "invitation_id": str(invitation.id),
-                "guest_email": invitation.guest_email,
-            }
+        #     return {
+        #         "action": "invitation_updated",
+        #         "invitation_id": str(invitation.id),
+        #         "guest_email": invitation.guest_email,
+        #     }
 
         else:
             raise ValidationError({"detail": "Invalid source_type provided."})

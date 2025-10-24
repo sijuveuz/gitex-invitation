@@ -5,11 +5,13 @@ from django.db import transaction
 from uuid import uuid4
 
 from adminapp.models import TicketType
+from invitations.utils.email_uniqueness_validator import check_email_uniqueness
 from .models import Invitation
 from invitations.models import (
     InvitationStats, 
     BulkUploadJob, InvitationLinkUsage
                                 )
+from accounts.serializers import UserDetailsSerializer
 
 
 class InvitationStatsSerializer(serializers.ModelSerializer):
@@ -74,11 +76,13 @@ class InvitationListSerializer(serializers.ModelSerializer):
     # registered = serializers.IntegerField(source="usage_count", read_only=True)
     link_limit = serializers.IntegerField(source="usage_limit", read_only=True)
     ticket_type = TicketTypeSerializer()
+    user = UserDetailsSerializer()
 
     class Meta:
         model = Invitation
         fields = [
             "id",
+            "user" ,
             "guest_name",
             "guest_email",
             "invite_type",
@@ -107,9 +111,11 @@ class InvitationListSerializer(serializers.ModelSerializer):
 
 class InvitationDetailSerializer(serializers.ModelSerializer):
     ticket_type = TicketTypeSerializer()
+    user = UserDetailsSerializer()
     class Meta:
         model = Invitation
         fields = (
+            "user",
             "guest_name",
             "guest_email",
             "company_name",
@@ -126,7 +132,7 @@ class InvitationDetailSerializer(serializers.ModelSerializer):
 
 
 class InvitationLinkGenerateSerializer(serializers.ModelSerializer):
-    # 👇 Custom field not present in the model
+    #Custom field not present in the model
     links_needed = serializers.IntegerField(write_only=True, min_value=1)
 
     class Meta:
@@ -138,7 +144,7 @@ class InvitationLinkGenerateSerializer(serializers.ModelSerializer):
         base_url = config("FRONTEND_URL", "http://178.18.253.63:3010/invite/register")
         links_needed = validated_data.pop("links_needed", 1)
 
-        stats, _ = InvitationStats.objects.get_or_create(user=user)
+        stats, _ = InvitationStats.objects.select_for_update().get_or_create(id=1)
 
         with transaction.atomic():
             stats.refresh_from_db()
@@ -181,6 +187,8 @@ class InvitationLinkRegisterSerializer(serializers.Serializer):
     def validate(self, data):
         try:
             invitation = Invitation.objects.get(link_code=data["link_code"], source_type="link")
+            email = data["guest_email"].lower().strip()
+            ticket_type = invitation.ticket_type
         except Invitation.DoesNotExist:
             raise serializers.ValidationError({"detail": "Invalid or non-existent invitation link."})
 
@@ -190,13 +198,16 @@ class InvitationLinkRegisterSerializer(serializers.Serializer):
         if invitation.usage_count >= invitation.usage_limit:
             raise serializers.ValidationError({"detail": "This invitation link has reached its usage limit."})
 
+        is_valid, msg, _ = check_email_uniqueness(email, ticket_type)
+        if not is_valid:
+            raise serializers.ValidationError({"detail": msg})
         # check existing usage for same email & same ticket type
         existing_usage = (
             InvitationLinkUsage.objects
             .filter(link=invitation, guest_email=data["guest_email"])
             .select_related("link")
             .first()
-        )
+        ) 
 
         if existing_usage:
             if existing_usage.registered:
@@ -227,7 +238,7 @@ class InvitationLinkRegisterSerializer(serializers.Serializer):
             invitation.usage_count = F("usage_count") + 1
             invitation.save(update_fields=["usage_count"])
 
-            stats, _ = InvitationStats.objects.select_for_update().get_or_create(user=invitation.user)
+            stats, _ = InvitationStats.objects.select_for_update().get_or_create(id=1)
             stats.registered_visitors = F("registered_visitors") + 1
             stats.save(update_fields=["registered_visitors"])
 
@@ -242,7 +253,7 @@ class InvitationLinkRegisterSerializer(serializers.Serializer):
         invitation.save(update_fields=["usage_count"])
 
         # Update stats
-        stats, _ = InvitationStats.objects.select_for_update().get_or_create(user=invitation.user)
+        stats, _ = InvitationStats.objects.select_for_update().get_or_create(id=1)
         stats.registered_visitors = F("registered_visitors") + 1
         stats.save(update_fields=["registered_visitors"])
 

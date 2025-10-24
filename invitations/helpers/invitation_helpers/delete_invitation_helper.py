@@ -12,12 +12,12 @@ def delete_invitation_helper(user, invitation_id):
     """
     with transaction.atomic():
         try:
-            invitation = Invitation.objects.select_for_update().get(id=invitation_id, user=user)
+            invitation = Invitation.objects.select_for_update().get(id=invitation_id)
         except Invitation.DoesNotExist:
             raise ValidationError({"detail": "Invitation not found."})
 
 
-        stats = InvitationStats.objects.select_for_update().get(user=user)
+        stats = InvitationStats.objects.select_for_update().get(id=1)
 
         # 🟡 CASE 1: SOFT DELETE (already used or partially used)
         if invitation.usage_count > 0:

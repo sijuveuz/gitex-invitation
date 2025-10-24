@@ -36,11 +36,11 @@ def normalize_ticket_type(value):
 def validate_row_csv_dict(
     row,
     row_number,
-    user = None,
+    # user = None,
     existing_global=None,
     existing_ticket=None,
     ticket_cache=None,
-    global_unique_enabled = None,
+    # global_unique_enabled = None,
     seen_global_dupes=None,
     seen_ticket_dupes=None,
     seen_lock=None,
@@ -95,12 +95,12 @@ def validate_row_csv_dict(
         print("KEY TICKET", key_ticket)
 
         # --- DB-level (existing) duplicates ---
-        if global_unique_enabled:
-            print("GLOBAL  - DB level UNIQ ENFORCED", global_unique_enabled)
-            if key_global in existing_global:
-                duplicate_db = True
-                errors["duplicate"] = "Duplicate invitation for this email globally."
-        elif enforce_unique:
+        # if global_unique_enabled:
+        #     print("GLOBAL  - DB level UNIQ ENFORCED", global_unique_enabled)
+        #     if key_global in existing_global:
+        #         duplicate_db = True
+        #         errors["duplicate"] = "Duplicate invitation for this email globally."
+        if enforce_unique:
             if key_ticket in existing_ticket:
                 duplicate_db = True
                 errors["duplicate"] = "Duplicate invitation for this email and ticket type."
@@ -108,15 +108,15 @@ def validate_row_csv_dict(
         # --- File-level duplicates ---
         if seen_lock:
             with seen_lock:
-                if global_unique_enabled:
-                    if key_global in seen_global_dupes:
-                        file_level_duplicate = True
-                        errors["file_level_duplicate"] = (
-                            f"Duplicate in file (also in row {seen_global_dupes[key_global]})"
-                        )
-                    else:
-                        seen_global_dupes[key_global] = row_number
-                elif enforce_unique:
+                # if global_unique_enabled:
+                #     if key_global in seen_global_dupes:
+                #         file_level_duplicate = True
+                #         errors["file_level_duplicate"] = (
+                #             f"Duplicate in file (also in row {seen_global_dupes[key_global]})"
+                #         )
+                #     else:
+                #         seen_global_dupes[key_global] = row_number
+                if enforce_unique:
                     if key_ticket in seen_ticket_dupes:
                         file_level_duplicate = True
                         errors["file_level_duplicate"] = (
@@ -125,28 +125,6 @@ def validate_row_csv_dict(
                     else:
                         seen_ticket_dupes[key_ticket] = row_number
 
-        # else:
-        #     # non-threaded fallback
-        #     if enforce_unique:
-        #         if seen_ticket_dupes is not None:
-        #             if key_ticket in seen_ticket_dupes:
-        #                 file_level_duplicate = True
-        #                 errors["file_level_duplicate"] = (
-        #                     f"Duplicate in file (also in row {seen_ticket_dupes[key_ticket]})"
-        #                 )
-        #             else:
-        #                 seen_ticket_dupes[key_ticket] = row_number
-        #     else:
-        #         if seen_global_dupes is not None:
-        #             if key_global in seen_global_dupes:
-        #                 file_level_duplicate = True
-        #                 errors["file_level_duplicate"] = (
-        #                     f"Duplicate in file (also in row {seen_global_dupes[key_global]})"
-        #                 )
-        #             else:
-        #                 seen_global_dupes[key_global] = row_number
-
-    # --- Final Row Object ---
     status = "valid" if not errors else "invalid"
 
     row_obj = {

@@ -2,6 +2,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from invitations.serializers import InvitationStatsSerializer
 from invitations.models import InvitationStats
+from django.db import transaction 
 
 
 
@@ -9,11 +10,11 @@ def get_user_invitation_stats(user):
     """
     Fetch or create invitation stats for a given user.
     """
-    stats, _ = InvitationStats.objects.get_or_create(user=user)
+    stats, _ = InvitationStats.objects.select_for_update().get_or_create(id=1)
     return stats
 
 
-
+@transaction.atomic
 def handle_invitation_stats_request(request):
     """
     Fetches and returns invitation statistics for the authenticated user.
@@ -40,7 +41,8 @@ def handle_invitation_stats_request(request):
             status=status.HTTP_200_OK,
         )
 
-    except Exception:
+    except Exception as e:
+        print(str(e))
         return Response(
             {
                 "status": "error",

@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.conf import settings
 from django.db import models
@@ -6,28 +7,26 @@ import uuid
 
 class InvitationStats(models.Model):
     """
-    Tracks invitation metrics for each registered user.
+    Global invitation counters for the system.
     """
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="invitation_stats"
-    )
     allocated_invitations = models.PositiveIntegerField(default=50000)
     generated_invitations = models.PositiveIntegerField(default=0)
     remaining_invitations = models.PositiveIntegerField(default=50000)
     registered_visitors = models.PositiveIntegerField(default=0)
 
-    def __str__(self):
-        return f"Invitation stats for {self.user.email}"
+    def save(self, *args, **kwargs):
+        # Allow only one instance
+        if not self.pk and InvitationStats.objects.exists():
+            raise ValidationError("Only one InvitationStats instance is allowed.")
+        super().save(*args, **kwargs)
 
     def update_remaining(self):
         self.remaining_invitations = self.allocated_invitations - self.generated_invitations
         self.save()
 
-    class Meta:
-        indexes = [
-            models.Index(fields=["user"]),
-            models.Index(fields=["remaining_invitations"]),
-        ]
+    def __str__(self):
+        return "Global Invitation Stats"
+
 
 
 class Invitation(models.Model):
@@ -177,7 +176,8 @@ class BulkUploadJob(models.Model):
 
     # small preview cached (first N rows) to show immediately in UI
     preview_data = models.JSONField(default=list, blank=True)
-    sample_errors = models.JSONField(default=list, blank=True)
+    # sample_errors = models.JSONField(default=list, blank=True)
+    error_note =  models.TextField(default=list, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

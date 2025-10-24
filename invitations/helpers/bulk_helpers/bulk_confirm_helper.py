@@ -33,7 +33,7 @@ def handle_bulk_confirm_request(request, job_id):
                 )
 
             # --- Fetch or create user stats ---
-            stats, _ = InvitationStats.objects.select_for_update().get_or_create(user=request.user)
+            stats, _ = InvitationStats.objects.select_for_update().get_or_create(id=1)
 
             total_to_generate = job.valid_count or 0
             if total_to_generate == 0:

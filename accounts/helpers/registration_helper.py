@@ -25,7 +25,7 @@ def create_user_and_tokens(validated_data):
         )
 
         # Ensure InvitationStats exists or create a new one
-        InvitationStats.objects.get_or_create(user=user)
+        InvitationStats.objects.get_or_create(id=1)
 
     # Create JWT tokens
     refresh = RefreshToken.for_user(user)

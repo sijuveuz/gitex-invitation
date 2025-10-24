@@ -29,7 +29,7 @@ def handle_bulk_add_row(request, job_id):
         )
 
     # --- Load global & ticket-level context once ---
-    global_unique_enabled, ticket_cache = load_ticket_email_validation_context()
+    ticket_cache = load_ticket_email_validation_context()
 
     # --- Prepare DB-level duplicate maps ---
     existing_global = set()
@@ -81,7 +81,7 @@ def handle_bulk_add_row(request, job_id):
         seen_global_dupes=seen_global_dupes,
         seen_ticket_dupes=seen_ticket_dupes,
         ticket_cache=ticket_cache,
-        global_unique_enabled=global_unique_enabled,
+        # global_unique_enabled=global_unique_enabled,
         seen_lock=seen_lock
     )
     new_row_obj["id"] = next_id
