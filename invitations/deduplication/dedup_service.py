@@ -25,6 +25,9 @@ class DeduplicationService:
         if seen_bloom:
             # Might be true duplicate — confirm with Redis
             seen_redis = RedisDeduper.check_and_lock(key, ttl=self.ttl)
+            if not seen_redis:
+                BloomManager.add(self.namespace, key)  # ← Missing!
+                return False
             return seen_redis
 
         # Step 2: New entry → set Redis lock
