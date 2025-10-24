@@ -4,6 +4,7 @@ import os
 DEBUG = True
 # ALLOWED_HOSTS = ['178.18.253.63']
 ALLOWED_HOSTS = ['178.18.253.63', '178.18.253.63:8083', 'localhost', '127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['http://178.18.253.63:8083', 'http://178.18.253.63']
 
 DATABASES = {
     'default': {
