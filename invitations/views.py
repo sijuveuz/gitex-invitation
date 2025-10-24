@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.conf import settings
+from rest_framework.permissions import AllowAny
 from django.http import FileResponse, Http404
 import os
 
@@ -27,7 +28,7 @@ from .helpers.dash_helpers.invitation_edit_helper import handle_invitation_edit
 from .helpers.personal_invite_helpers.personal_invite_helper import handle_send_personal_invitation
 from .helpers.bulk_helpers.bulk_upload_helper import handle_bulk_upload
 from .helpers.dash_helpers.invitation_stats_helper import handle_invitation_stats_request
-
+from invitations.helpers.invitation_helpers.invitation_detail_helper import handle_invitation_detail
 
 class InvitationStatsView(APIView):
     """
@@ -170,13 +171,6 @@ class InvitationListView(APIView):
 
     def get(self, request):
         return handle_invitation_list(request)
-
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import AllowAny
-from invitations.helpers.invitation_helpers.invitation_detail_helper import handle_invitation_detail
  
 
 class InvitationDetailView(APIView):
