@@ -119,7 +119,7 @@ class Invitation(models.Model):
             # 1️⃣ Check Ticket-level uniqueness
             if ticket_type.enforce_unique_email:
                 exists = Invitation.objects.filter(
-                    user=self.user,
+                    # user=self.user,
                     guest_email=email,
                     ticket_type=ticket_type
                 ).exists()
@@ -135,7 +135,7 @@ class Invitation(models.Model):
                         scope="ticket",
                         reason=f"Email already exists for this ticket: {ticket_name}"
                     )
-                    raise ValidationError(f"Duplicate email for ticket type '{ticket_name}'")
+                    # raise ValidationError(f"Duplicate email for ticket type '{ticket_name}'")
 
         return super().save(*args, **kwargs)
 
