@@ -106,16 +106,16 @@ def create_invitation_objects(chunk, job, BASE_URL, ticket_map, ticket_cache,
         send_bulk_invite_logger.info(f"🔑 Processing Guest: Email={email}, Ticket={ticket_name}")
 
         # Determine dedup scope
-        scope = resolve_dedup_scope(ticket_name, ticket_cache)
-        send_bulk_invite_logger.info(f"🎯 Dedup Scope for Ticket '{ticket_name}' → {scope}")
+        # scope = resolve_dedup_scope(ticket_name, ticket_cache)
+        # send_bulk_invite_logger.info(f"🎯 Dedup Scope for Ticket '{ticket_name}' → {scope}")
 
-        # Perform dedup check
-        is_dup = handle_deduplication(job, dedup, email, ticket_name, scope)
-        send_bulk_invite_logger.info(f"📌 Dedup Result for ({email}, {ticket_name}, scope={scope}) → is_dup={is_dup}")
+        # # Perform dedup check
+        # is_dup = handle_deduplication(job, dedup, email, ticket_name, scope)
+        # send_bulk_invite_logger.info(f"📌 Dedup Result for ({email}, {ticket_name}, scope={scope}) → is_dup={is_dup}")
 
-        if is_dup:
-            send_bulk_invite_logger.warning(f"🚫 Skipping — Deduplication detected duplicate → {email} / {ticket_name}")
-            continue
+        # if is_dup:
+        #     send_bulk_invite_logger.warning(f"🚫 Skipping — Deduplication detected duplicate → {email} / {ticket_name}")
+        #     continue
 
         # DB-level duplicate fallback filter
         ticket_type_obj = ticket_cache.get(ticket_name) if ticket_cache else None
@@ -204,108 +204,36 @@ def bulk_create_invitations(invites_to_create, created_total, pending_total):
 # 🔹 MAIN TASK
 # ==============================
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from celery import shared_task
-from django.core.exceptions import ValidationError
+# from concurrent.futures import ThreadPoolExecutor, as_completed
+# from celery import shared_task
+# from django.core.exceptions import ValidationError
 
-THREAD_WORKERS = 10  # You can increase to 20 if DB is strong
-
-
-def save_invite_with_logging(invite):
-    """
-    Runs invite.save() inside thread and returns status.
-    """
-    try:
-        invite.save()
-        return "created"
-    except ValidationError:
-        return "duplicate"
-    except Exception:
-        # extra safety, no crash
-        return "duplicate"
+# THREAD_WORKERS = 10  # You can increase to 20 if DB is strong
 
 
-@shared_task(bind=True)
-def send_bulk_invite(self, job_id, expire_date, default_message):
-    """Main Celery Task: send invites for valid rows after user confirms."""
+# def save_invite_with_logging(invite):
+#     """
+#     Runs invite.save() inside thread and returns status.
+#     """
+#     try:
+#         invite.save()
+#         return "created"
+#     except ValidationError:
+#         return "duplicate"
+#     except Exception:
+#         # extra safety, no crash
+#         return "duplicate"
 
-    try:
-        send_bulk_invite_logger.info(f"Bulk invite started for Job id: {job_id}")
-        print("SENDING BULK INVITES...")
-
-        # Setup phase
-        job, dedup, redis_client = get_bulk_job_and_setup(job_id)
-        rows, redis_key = fetch_rows_from_redis(redis_client, job_id)
-        BASE_URL, ticket_map, stats, existing_global, existing_ticket, ticket_cache = prepare_invitation_data(job)
-
-        total = len(rows)
-        created_total = 0
-        pending_total = 0
-
-        for start in range(0, total, BATCH_CREATE):
-            end = start + BATCH_CREATE
-            chunk = rows[start:end]
-
-            send_bulk_invite_logger.info(
-                f"📦 Processing batch {start//BATCH_CREATE + 1}: rows {start} → {min(end, total)} / {total}"
-            )
-
-            invites_to_create = create_invitation_objects(
-                chunk, job, BASE_URL, ticket_map, ticket_cache,
-                existing_global, existing_ticket,
-                dedup, expire_date, default_message
-            )
-
-            # ✅ Ensure job reference is available in save() dedup logging
-            for invite in invites_to_create:
-                invite._bulk_job = job
-
-            # ✅ Threaded parallel save (fast + duplicate-safe)
-            with ThreadPoolExecutor(max_workers=THREAD_WORKERS) as executor:
-                futures = [executor.submit(save_invite_with_logging, invite) for invite in invites_to_create]
-
-                for future in as_completed(futures):
-                    result = future.result()
-                    if result == "created":
-                        created_total += 1
-                    else:
-                        pending_total += 1
-
-            # ✅ Update global stats
-            stats.generated_invitations += len(invites_to_create)
-            stats.remaining_invitations = max(stats.allocated_invitations - stats.generated_invitations, 0)
-            stats.save(update_fields=["generated_invitations", "remaining_invitations"])
-
-            # ✅ Celery progress update
-            self.update_state(state="PROGRESS", meta={"created": created_total, "pending": pending_total})
-
-            send_bulk_invite_logger.info(
-                f"✅ Batch done → Created: {created_total}, Pending: {pending_total}"
-            )
-
-        # ✅ Mark job completed
-        job.status = BulkUploadJob.STATUS_COMPLETED
-        job.save(update_fields=["status", "updated_at"])
-        delete_rows_key(job_id)
-
-        print(f"🎉 Job {job_id} completed — Created={created_total}, Pending={pending_total}")
-        return {"created": created_total, "pending": pending_total}
-
-    except Exception as e:
-        print(f"❌ Error in bulk job {job_id}: {e}")
-        job = BulkUploadJob.objects.filter(id=job_id).first()
-        if job:
-            job.status = BulkUploadJob.STATUS_FAILED
-            job.error_note = str(e)
-            job.save(update_fields=["status"])
-        raise
 
 # @shared_task(bind=True)
 # def send_bulk_invite(self, job_id, expire_date, default_message):
 #     """Main Celery Task: send invites for valid rows after user confirms."""
+
 #     try:
 #         send_bulk_invite_logger.info(f"Bulk invite started for Job id: {job_id}")
-#         print("SENDING BUK INVITESSSSS")
+#         print("SENDING BULK INVITES...")
+
+#         # Setup phase
 #         job, dedup, redis_client = get_bulk_job_and_setup(job_id)
 #         rows, redis_key = fetch_rows_from_redis(redis_client, job_id)
 #         BASE_URL, ticket_map, stats, existing_global, existing_ticket, ticket_cache = prepare_invitation_data(job)
@@ -318,12 +246,9 @@ def send_bulk_invite(self, job_id, expire_date, default_message):
 #             end = start + BATCH_CREATE
 #             chunk = rows[start:end]
 
-#             # ✅ Log batch start
 #             send_bulk_invite_logger.info(
-#                 f"📦 Processing batch {start//BATCH_CREATE + 1}: rows {start} → {min(end, total)} (total: {total})"
+#                 f"📦 Processing batch {start//BATCH_CREATE + 1}: rows {start} → {min(end, total)} / {total}"
 #             )
-
-
 
 #             invites_to_create = create_invitation_objects(
 #                 chunk, job, BASE_URL, ticket_map, ticket_cache,
@@ -331,43 +256,118 @@ def send_bulk_invite(self, job_id, expire_date, default_message):
 #                 dedup, expire_date, default_message
 #             )
 
-#             # created_total, pending_total = bulk_create_invitations(invites_to_create, created_total, pending_total)
+#             # ✅ Ensure job reference is available in save() dedup logging
 #             for invite in invites_to_create:
-#                 invite._bulk_job = job  # ✅ attach job reference for logging
-#                 try:
-#                     invite.save()
-#                     created_total += 1
-#                 except ValidationError:
-#                     pending_total += 1
+#                 invite._bulk_job = job
 
+#             # ✅ Threaded parallel save (fast + duplicate-safe)
+#             with ThreadPoolExecutor(max_workers=THREAD_WORKERS) as executor:
+#                 futures = [executor.submit(save_invite_with_logging, invite) for invite in invites_to_create]
 
-#             send_bulk_invite_logger.info(
-#                 f"✅ Batch {start//BATCH_CREATE + 1} completed → Created: {created_total}, Pending: {pending_total}"
-#             )
-#             # Update stats
+#                 for future in as_completed(futures):
+#                     result = future.result()
+#                     if result == "created":
+#                         created_total += 1
+#                     else:
+#                         pending_total += 1
+
+#             # ✅ Update global stats
 #             stats.generated_invitations += len(invites_to_create)
 #             stats.remaining_invitations = max(stats.allocated_invitations - stats.generated_invitations, 0)
 #             stats.save(update_fields=["generated_invitations", "remaining_invitations"])
 
+#             # ✅ Celery progress update
 #             self.update_state(state="PROGRESS", meta={"created": created_total, "pending": pending_total})
-#             print(f"Created {created_total} active, {pending_total} pending so far...")
 
-#         # Job completion
+#             send_bulk_invite_logger.info(
+#                 f"✅ Batch done → Created: {created_total}, Pending: {pending_total}"
+#             )
+
+#         # ✅ Mark job completed
 #         job.status = BulkUploadJob.STATUS_COMPLETED
 #         job.save(update_fields=["status", "updated_at"])
 #         delete_rows_key(job_id)
 
-#         print(f"Job {job_id} completed — {created_total} active, {pending_total} pending.")
+#         print(f"🎉 Job {job_id} completed — Created={created_total}, Pending={pending_total}")
 #         return {"created": created_total, "pending": pending_total}
 
 #     except Exception as e:
-#         print(f"Error in bulk job {job_id}: {e}")
+#         print(f"❌ Error in bulk job {job_id}: {e}")
 #         job = BulkUploadJob.objects.filter(id=job_id).first()
 #         if job:
 #             job.status = BulkUploadJob.STATUS_FAILED
 #             job.error_note = str(e)
 #             job.save(update_fields=["status"])
 #         raise
+
+@shared_task(bind=True)
+def send_bulk_invite(self, job_id, expire_date, default_message):
+    """Main Celery Task: send invites for valid rows after user confirms."""
+    try:
+        send_bulk_invite_logger.info(f"Bulk invite started for Job id: {job_id}")
+        print("SENDING BUK INVITESSSSS")
+        job, dedup, redis_client = get_bulk_job_and_setup(job_id)
+        rows, redis_key = fetch_rows_from_redis(redis_client, job_id)
+        BASE_URL, ticket_map, stats, existing_global, existing_ticket, ticket_cache = prepare_invitation_data(job)
+
+        total = len(rows)
+        created_total = 0
+        pending_total = 0
+
+        for start in range(0, total, BATCH_CREATE):
+            end = start + BATCH_CREATE
+            chunk = rows[start:end]
+
+            # ✅ Log batch start
+            send_bulk_invite_logger.info(
+                f"📦 Processing batch {start//BATCH_CREATE + 1}: rows {start} → {min(end, total)} (total: {total})"
+            )
+
+
+
+            invites_to_create = create_invitation_objects(
+                chunk, job, BASE_URL, ticket_map, ticket_cache,
+                existing_global, existing_ticket,
+                dedup, expire_date, default_message
+            )
+
+            # created_total, pending_total = bulk_create_invitations(invites_to_create, created_total, pending_total)
+            for invite in invites_to_create:
+                invite._bulk_job = job  # ✅ attach job reference for logging
+                try:
+                    invite.save()
+                    created_total += 1
+                except ValidationError:
+                    pending_total += 1
+
+
+            send_bulk_invite_logger.info(
+                f"✅ Batch {start//BATCH_CREATE + 1} completed → Created: {created_total}, Pending: {pending_total}"
+            )
+            # Update stats
+            stats.generated_invitations += len(invites_to_create)
+            stats.remaining_invitations = max(stats.allocated_invitations - stats.generated_invitations, 0)
+            stats.save(update_fields=["generated_invitations", "remaining_invitations"])
+
+            self.update_state(state="PROGRESS", meta={"created": created_total, "pending": pending_total})
+            print(f"Created {created_total} active, {pending_total} pending so far...")
+
+        # Job completion
+        job.status = BulkUploadJob.STATUS_COMPLETED
+        job.save(update_fields=["status", "updated_at"])
+        delete_rows_key(job_id)
+
+        print(f"Job {job_id} completed — {created_total} active, {pending_total} pending.")
+        return {"created": created_total, "pending": pending_total}
+
+    except Exception as e:
+        print(f"Error in bulk job {job_id}: {e}")
+        job = BulkUploadJob.objects.filter(id=job_id).first()
+        if job:
+            job.status = BulkUploadJob.STATUS_FAILED
+            job.error_note = str(e)
+            job.save(update_fields=["status"])
+        raise
 
 
 
