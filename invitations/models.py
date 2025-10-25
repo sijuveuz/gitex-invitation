@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models
 import uuid
 
+from adminapp.models import DuplicateRecord
+
 
 class InvitationStats(models.Model):
     """
@@ -82,13 +84,6 @@ class Invitation(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
-        # constraints = [
-        #     models.UniqueConstraint(
-        #         fields=["user", "guest_email", "ticket_type"],
-        #         name="unique_invite_per_guest_per_ticket",
-        #         condition=~models.Q(guest_email__isnull=True),
-        #     ),
-        # ]
 
         indexes = [
             models.Index(fields=["user", "guest_email"]),
@@ -114,6 +109,35 @@ class Invitation(models.Model):
         self.status = "expired"
         self.save(update_fields=["status", "updated_at"])
 
+    def save(self, *args, **kwargs):
+        # Avoid duplicate check on updates
+        if not self.pk:
+            ticket_type = self.ticket_type
+            email = (self.guest_email or "").strip().lower()
+            ticket_name = ticket_type.name.lower()
+
+            # 1️⃣ Check Ticket-level uniqueness
+            if ticket_type.enforce_unique_email:
+                exists = Invitation.objects.filter(
+                    user=self.user,
+                    guest_email=email,
+                    ticket_type=ticket_type
+                ).exists()
+
+                if exists:
+                    # Log duplicate
+                    DuplicateRecord.objects.create(
+                        user=self.user,
+                        guest_email=email,
+                        job=getattr(self, "_bulk_job", None),
+                        ticket_type=ticket_type,
+                        detection_source="db_check",
+                        scope="ticket",
+                        reason=f"Email already exists for this ticket: {ticket_name}"
+                    )
+                    raise ValidationError(f"Duplicate email for ticket type '{ticket_name}'")
+
+        return super().save(*args, **kwargs)
 
 class InvitationLinkUsage(models.Model):
     """

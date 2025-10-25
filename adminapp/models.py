@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 
-from invitations.models import BulkUploadJob
 from accounts.models import User 
 
 class TicketType(models.Model):
@@ -62,7 +61,7 @@ class DuplicateRecord(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="duplicate_records")
     job = models.ForeignKey(
-        BulkUploadJob, on_delete=models.CASCADE, related_name="duplicate_records"
+        "invitations.BulkUploadJob", on_delete=models.CASCADE, related_name="duplicate_records"
     )
     ticket_type = models.ForeignKey(
         TicketType, on_delete=models.SET_NULL, null=True, blank=True, related_name="duplicate_records"

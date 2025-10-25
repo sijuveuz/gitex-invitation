@@ -11,8 +11,6 @@ def check_email_uniqueness(email, ticket_type, existing_global=None, existing_ti
     if not email or not ticket_type:
         return True, None, None
 
-    # global_setting = InvitationSettings.objects.first()
-    # global_unique = getattr(global_setting, "enforce_global_unique", False)
     ticket_unique = getattr(ticket_type, "enforce_unique_email", False)
 
     ticket_name = ticket_type.name.lower()
@@ -28,15 +26,4 @@ def check_email_uniqueness(email, ticket_type, existing_global=None, existing_ti
                 return False, f"Email already exists.", "ticket"
         return True, None, "ticket"
 
-    # # --- Priority 2: Global uniqueness ---
-    # if global_unique:
-    #     if existing_global is not None:
-    #         if email in existing_global:
-    #             return False, f"'{email}' already exists globally.", "global"
-    #     else:
-    #         if Invitation.objects.filter(guest_email=email).exists():
-    #             return False, f"'{email}' already exists globally.", "global"
-    #     return True, None, "global"
-
-    # --- Priority 3: No uniqueness enforced ---
     return True, None, None
