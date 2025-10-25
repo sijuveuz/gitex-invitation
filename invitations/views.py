@@ -375,5 +375,25 @@ class InvitationExportDownloadView(APIView):
         response = FileResponse(open(file_path, "rb"), as_attachment=True)
         return response
     
+from invitations.models import BulkUploadJob
+from invitations.serializers import BulkUploadJobSerializer
+class BulkUploadJobListView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        jobs = BulkUploadJob.objects.order_by("-created_at")[:10]
+        serializer = BulkUploadJobSerializer(jobs, many=True)
+        return Response(serializer.data)
 
+from django.http import Http404
+
+class BulkUploadJobStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, job_id):
+        try:
+            job = BulkUploadJob.objects.get(id=job_id)
+        except BulkUploadJob.DoesNotExist:
+            raise Http404("Job not found")
+
+        return Response({"id": str(job.id), "status": job.status})

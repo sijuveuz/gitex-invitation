@@ -41,9 +41,10 @@ urlpatterns = [
     #Export to file
     path("exports/request/", views.InvitationExportStartView.as_view(), name="export-request"),
     path("exports/<uuid:job_id>/", views.InvitationExportStatusView.as_view(), name="export-status"),
-    path("export/download/<str:filename>/", views.InvitationExportDownloadView.as_view())
+    path("export/download/<str:filename>/", views.InvitationExportDownloadView.as_view()),
 
-]   
+    path("jobs/", views.BulkUploadJobListView.as_view(), name="bulk-job-list"),
+    path("jobs/<uuid:job_id>/status/", views.BulkUploadJobStatusView.as_view(), name="bulk-job-status"),]   
  
 
 

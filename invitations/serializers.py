@@ -286,3 +286,16 @@ class InvitationDetailSerializerById(serializers.ModelSerializer):
             usages = obj.usages.all()  # related_name='usages'
             return InvitationLinkUsageSerializer(usages, many=True).data
         return None
+
+
+# invitations/api/serializers.py
+from rest_framework import serializers
+from invitations.models import BulkUploadJob
+
+class BulkUploadJobSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BulkUploadJob
+        fields = [
+            "id", "file_name", "status", "total_count",
+            "valid_count", "invalid_count", "created_at"
+        ]
