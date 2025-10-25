@@ -4,7 +4,7 @@ from threading import Lock
 
 from invitations.models import BulkUploadJob, Invitation
 from invitations.utils.redis_utils import range_rows, update_row, get_stats, incr_stats
-from invitations.helpers.bulk_helpers.bulk_validator import load_ticket_types_cache, validate_row_csv_dict
+from invitations.utils.validate_row_csv import load_ticket_types_cache, validate_row_csv_dict
 from invitations.utils.bulk_email_uniqueness_validator import load_ticket_email_validation_context
 
 def handle_bulk_row_patch(request, job_id, row_id):

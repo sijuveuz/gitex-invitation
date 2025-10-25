@@ -12,6 +12,8 @@ import uuid
 BATCH_CREATE = 5000  # Batch size for creating invitations
 
 
+import logging
+send_bulk_invite_logger = logging.getLogger("django")
 # ==============================
 # 🔹 HELPER FUNCTIONS
 # ==============================
@@ -21,7 +23,12 @@ def get_bulk_job_and_setup(job_id):
     job = BulkUploadJob.objects.get(id=job_id)
     job.status = BulkUploadJob.STATUS_SENDING
     job.save(update_fields=["status"])
-    dedup = DeduplicationService(namespace=f"bulk:{job_id}")
+
+    # dedup = DeduplicationService(namespace=f"bulk:{job_id}")
+    #Common for all
+    dedup = DeduplicationService(namespace=f"invite")
+    send_bulk_invite_logger.info(f"✅ DeduplicationService initialised for Job id: {job_id}")
+
     redis_client = get_redis()
     return job, dedup, redis_client
 
@@ -39,9 +46,6 @@ def prepare_invitation_data(job):
     ticket_map = {t.name.lower(): t.id for t in TicketType.objects.filter(is_active=True)}
     stats, _ = InvitationStats.objects.get_or_create(id=1)
 
-    # existing_raw = Invitation.objects.filter(user=job.user).values_list(
-    #     "guest_email", "ticket_type__name"
-    # )
     existing_raw = Invitation.objects.values_list(
         "guest_email", "ticket_type__name"
     )
@@ -54,6 +58,8 @@ def prepare_invitation_data(job):
 
 def handle_deduplication(job, dedup, email, ticket_name, scope):
     """Check and log duplicates using the dedup service."""
+
+    send_bulk_invite_logger.debug(f"SCOPE RECEIVED IN handle_deduplication : {scope}")
     is_dup = False
     if scope != "none":
         is_dup = dedup.is_duplicate(
@@ -79,39 +85,55 @@ def create_invitation_objects(chunk, job, BASE_URL, ticket_map, ticket_cache,
                               dedup, expire_date, default_message):
     """Core logic to process a chunk of rows and prepare Invitation objects."""
     invites_to_create = []
+
     for row in chunk:   
         if row.get("status") != "valid":
+            send_bulk_invite_logger.warning("❌ Row skipped because status != valid")
             continue
 
         ticket_name = (row.get("ticket_type") or "").strip().lower()
         ticket_type_id = ticket_map.get(ticket_name)
         if not ticket_type_id:
+            send_bulk_invite_logger.error(f"❌ Invalid Ticket Type: '{ticket_name}' → Skipping Row")
             continue
 
         email = row["guest_email"].lower()
         unique_code = uuid.uuid4()
         invite_url = f"{BASE_URL}{unique_code}"
         key_ticket = (email, ticket_name)
-        key_global = email
 
-        # Resolve deduplication scope
-        scope = resolve_dedup_scope( ticket_name, ticket_cache)
+        send_bulk_invite_logger.info(f"🔑 Processing Guest: Email={email}, Ticket={ticket_name}")
+
+        # Determine dedup scope
+        scope = resolve_dedup_scope(ticket_name, ticket_cache)
+        send_bulk_invite_logger.info(f"🎯 Dedup Scope for Ticket '{ticket_name}' → {scope}")
+
+        # Perform dedup check
         is_dup = handle_deduplication(job, dedup, email, ticket_name, scope)
+        send_bulk_invite_logger.info(f"📌 Dedup Result for ({email}, {ticket_name}, scope={scope}) → is_dup={is_dup}")
+
         if is_dup:
+            send_bulk_invite_logger.warning(f"🚫 Skipping — Deduplication detected duplicate → {email} / {ticket_name}")
             continue
 
-        # DB-level duplicate filtering
+        # DB-level duplicate fallback filter
         ticket_type_obj = ticket_cache.get(ticket_name) if ticket_cache else None
         if not ticket_type_obj:
+            send_bulk_invite_logger.warning(f"❌ No Ticket Config Found for '{ticket_name}', skipping")
             continue
 
         enforce_unique = ticket_type_obj.get("enforce_unique_email", False)
-        # if global_unique_enabled and key_global in existing_global:
-        #     continue
+
+        if enforce_unique:
+            send_bulk_invite_logger.debug(f"🔒 Ticket '{ticket_name}' enforces unique email")
+
         if enforce_unique and key_ticket in existing_ticket:
-            #Report generation for duplicate data
+            send_bulk_invite_logger.warning(
+                f"🚫 DB Duplicate detected (already exists): {key_ticket} — Skipping"
+            )
             continue
 
+        # Create invitation object
         invite = Invitation(
             user=job.user,
             guest_name=row["guest_name"].strip(),
@@ -129,7 +151,11 @@ def create_invitation_objects(chunk, job, BASE_URL, ticket_map, ticket_cache,
         )
         invites_to_create.append(invite)
 
+        send_bulk_invite_logger.info(f"✅ Invitation queued for creation: {email} ({ticket_name})")
+
+    send_bulk_invite_logger.info(f"🎉 Total invitations prepared in this chunk: {len(invites_to_create)}")
     return invites_to_create
+
 
 
 def bulk_create_invitations(invites_to_create, created_total, pending_total):
@@ -160,6 +186,8 @@ def bulk_create_invitations(invites_to_create, created_total, pending_total):
 def send_bulk_invite(self, job_id, expire_date, default_message):
     """Main Celery Task: send invites for valid rows after user confirms."""
     try:
+        send_bulk_invite_logger.info(f"Bulk invite started for Job id: {job_id}")
+        print("SENDING BUK INVITESSSSS")
         job, dedup, redis_client = get_bulk_job_and_setup(job_id)
         rows, redis_key = fetch_rows_from_redis(redis_client, job_id)
         BASE_URL, ticket_map, stats, existing_global, existing_ticket, ticket_cache = prepare_invitation_data(job)
@@ -172,6 +200,13 @@ def send_bulk_invite(self, job_id, expire_date, default_message):
             end = start + BATCH_CREATE
             chunk = rows[start:end]
 
+            # ✅ Log batch start
+            send_bulk_invite_logger.info(
+                f"📦 Processing batch {start//BATCH_CREATE + 1}: rows {start} → {min(end, total)} (total: {total})"
+            )
+
+
+
             invites_to_create = create_invitation_objects(
                 chunk, job, BASE_URL, ticket_map, ticket_cache,
                 existing_global, existing_ticket,
@@ -180,6 +215,9 @@ def send_bulk_invite(self, job_id, expire_date, default_message):
 
             created_total, pending_total = bulk_create_invitations(invites_to_create, created_total, pending_total)
 
+            send_bulk_invite_logger.info(
+                f"✅ Batch {start//BATCH_CREATE + 1} completed → Created: {created_total}, Pending: {pending_total}"
+            )
             # Update stats
             stats.generated_invitations += len(invites_to_create)
             stats.remaining_invitations = max(stats.allocated_invitations - stats.generated_invitations, 0)

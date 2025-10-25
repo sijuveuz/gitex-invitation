@@ -10,8 +10,8 @@ class RedisDeduper:
     """
 
     @staticmethod
-    def check_and_lock(key, ttl=3600):
-        r = get_redis()
+    def check_and_lock(key, ttl=3600, redis_client= "redis://localhost:6379/0"):
+        r = redis_client
         # SETNX (set if not exists)
         was_set = r.setnx(key, 1)
         if was_set:
@@ -20,8 +20,8 @@ class RedisDeduper:
         return True  # Duplicate already seen
 
     @staticmethod
-    def clear_namespace(namespace_prefix):
-        r = get_redis()
+    def clear_namespace(namespace_prefix, redis_client):
+        r = redis_client
         keys = r.keys(f"{namespace_prefix}*")
         if keys:
             r.delete(*keys)

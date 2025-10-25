@@ -43,21 +43,60 @@ CELERY_QUEUES = {
 
 CELERY_TASK_DEFAULT_QUEUE = "veuz3_queue"
 
+# CELERYD_HIJACK_ROOT_LOGGER = False
+# worker_hijack_root_logger = False
+
+
 # LOGGING = {
 #     'version': 1,
-#     'disable_existing_loggers': True,
-#     'handlers': {
-#         'console': {'class': 'logging.StreamHandler'},
-#         'file': {
-#             'class': 'logging.FileHandler',
-#             'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
+#     'disable_existing_loggers': False,
+
+#     'formatters': {
+#         'verbose': {
+#             'format': '[{asctime}] {levelname} {name}: {message}',
+#             'style': '{',
 #         },
 #     },
+
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#             'formatter': 'verbose',
+#         },
+#         'file': {
+#             'class': 'logging.FileHandler',
+#             'filename': BASE_DIR / 'logs' / 'django.log',
+#             'formatter': 'verbose',
+#         },
+#         'celery_file': {
+#             'class': 'logging.FileHandler',
+#             'filename': BASE_DIR / 'logs' / 'celery.log',
+#             'formatter': 'verbose',
+#         },
+#         'send_bulk_invite_file': {  
+#             'class': 'logging.FileHandler',
+#             'filename': BASE_DIR / 'logs' / 'send_bulk_invite.log',
+#             'formatter': 'verbose',
+#         },
+#     },
+
 #     'loggers': {
 #         'django': {
 #             'handlers': ['console', 'file'],
-#             'level': 'DEBUG',
+#             'level': 'INFO',
 #             'propagate': True,
+#         },
+#         'celery': {
+#             'handlers': ['console', 'celery_file'],
+#             'level': 'INFO',
+#             'propagate': False,
+#         },
+#         'send_bulk_invite': {   # ✅ Now logs only to its own file
+#             'handlers': ['console', 'send_bulk_invite_file'],
+#             'level': 'INFO',
+#             'propagate': False,
 #         },
 #     },
 # }
+
+

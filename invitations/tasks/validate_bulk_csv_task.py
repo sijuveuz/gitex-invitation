@@ -32,7 +32,7 @@ from invitations.models import BulkUploadJob, Invitation
 from invitations.utils.redis_utils import (
     get_redis, delete_rows_key, get_stats, set_stats, set_status, push_row
 )
-from invitations.helpers.bulk_helpers.bulk_validator import (
+from invitations.utils.validate_row_csv import (
     load_ticket_types_cache, clear_ticket_types_cache, validate_row_csv_dict
 ) 
 from decouple import config
@@ -66,12 +66,6 @@ def validate_csv_file_task(self, job_id, default_message=None):
         delete_rows_key(job_id)
         r = get_redis()
         pipe = r.pipeline(transaction=False)
-
-        # --- Preload all reusable data (1x DB hits only) ---
-        # ticket_cache = {
-        #     t.name.lower(): t
-        #     for t in TicketType.objects.filter(is_active=True)
-        # }
 
         existing_raw = Invitation.objects.values_list(
             "guest_email", "ticket_type__name"

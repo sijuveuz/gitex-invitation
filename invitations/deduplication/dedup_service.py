@@ -1,39 +1,44 @@
 from .bloom_manager import BloomManager
 from .redis_deduper import RedisDeduper
 from .utils import make_dedup_key
+import logging
+from invitations.utils.redis_utils import get_redis
+dedup_logger = logging.getLogger("django")
 
 class DeduplicationService:
-    """
-    Unified deduplication service combining:
-    - Bloom filter (fast pre-check)
-    - Redis (atomic exact lock)
-    """
-
-    def __init__(self, namespace="default", ttl=3600):
+    def __init__(self, namespace="invite", ttl=3600):
         self.namespace = namespace
         self.ttl = ttl
+        self.redis_client = get_redis()
 
     def is_duplicate(self, user_id, email, ticket_type):
-        """
-        Returns True if duplicate (exists before),
-        False if new and locks it in Redis.
-        """
-        key = make_dedup_key(user_id, email, ticket_type)
+        key = make_dedup_key(email, ticket_type)
+
+        dedup_logger.debug(f"[DE-DUP] Checking key = {key}")
 
         # Step 1: Bloom quick check
         seen_bloom = BloomManager.seen_before(self.namespace, key)
+
         if seen_bloom:
-            # Might be true duplicate — confirm with Redis
-            seen_redis = RedisDeduper.check_and_lock(key, ttl=self.ttl)
+            dedup_logger.debug(f"[DE-DUP] Bloom suggests: POSSIBLE DUPLICATE → {key}")
+
+            # Confirm with Redis
+            seen_redis = RedisDeduper.check_and_lock(key, ttl=self.ttl, redis_client = self.redis_client )
+
             if not seen_redis:
-                BloomManager.add(self.namespace, key)  # ← Missing!
+                dedup_logger.debug(f"[DE-DUP] Redis says: NOT duplicate → inserting into bloom → {key}")
+                BloomManager.get_filter(self.namespace).add(key)
                 return False
-            return seen_redis
 
-        # Step 2: New entry → set Redis lock
-        RedisDeduper.check_and_lock(key, ttl=self.ttl)
+            dedup_logger.warning(f"[DE-DUP] ✅ CONFIRMED DUPLICATE → {key}")
+            return True
+
+        # Step 2: Bloom says new → lock in Redis
+        first_time = RedisDeduper.check_and_lock(key, ttl=self.ttl, redis_client = self.redis_client )
+
+        if not first_time:
+            # Should not normally happen, but logged for clarity
+            dedup_logger.warning(f"[DE-DUP] Redis LOCK existed but bloom didn't know → {key}")
+
+        dedup_logger.info(f"[DE-DUP] ✅ NEW ENTRY (first time) → key stored → {key}")
         return False
-
-    def clear(self):
-        BloomManager.clear(self.namespace)
-        RedisDeduper.clear_namespace(f"dedup:{self.namespace}")

@@ -17,24 +17,6 @@ DATABASES = {
     }
 }
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {'class': 'logging.StreamHandler'},
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': '/home/veuz3/projects/gitex-invitation/logs/django.log',
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-    },
-}
 
 
 STATIC_URL = '/static/'
@@ -65,4 +47,57 @@ CACHES = {
         "LOCATION": REDIS_URL,
         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
     }
+}
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'django.log',
+            'formatter': 'verbose',
+        },
+        'celery_file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'celery.log',
+            'formatter': 'verbose',
+        },
+        'send_bulk_invite_file': {  
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'send_bulk_invite.log',
+            'formatter': 'verbose',
+        },
+    },
+
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'celery': {
+            'handlers': ['console', 'celery_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'send_bulk_invite': {   
+            'handlers': ['console', 'send_bulk_invite_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
 }
