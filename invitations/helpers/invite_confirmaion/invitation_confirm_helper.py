@@ -64,7 +64,7 @@ def handle_invitation_confirm(request, link_code):
     )
 
     # ✅ Update exhibitor stats
-    stats, _ = InvitationStats.objects.select_for_update().get_or_create(user=invitation.user)
+    stats, _ = InvitationStats.objects.select_for_update().get_or_create(id =1)
     stats.registered_visitors += 1
     stats.save(update_fields=["registered_visitors"])
 

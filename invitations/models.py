@@ -6,7 +6,6 @@ import uuid
 
 from adminapp.models import DuplicateRecord
 
-
 class InvitationStats(models.Model):
     """
     Global invitation counters for the system.
