@@ -12,7 +12,7 @@ from reportlab.lib.units import mm
 def export_invitations_task(user_id, export_format, job_id):
     r = get_redis()
     user = User.objects.get(id=user_id)
-    invitations = Invitation.objects.filter(user=user)
+    invitations = Invitation.objects.all()
 
     exporters = {
         "csv": CSVExporter,
