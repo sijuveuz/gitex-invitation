@@ -28,19 +28,9 @@ def create_personal_invitation(user, data):
             "detail": f"Invalid ticket type '{data['ticket_type']}'. Please select a valid option."
         })
 
-    # existing = Invitation.objects.filter(
-    #     user=user,
-    #     guest_email=email,
-    #     ticket_type=ticket_type_obj
-    # ).first()
-
-    # if existing:
-    #     raise ValidationError({
-    #         "detail": f"An invitation for '{email}' already exists with Ticket class '{data['ticket_type']}'."
-    #     })
 
     with transaction.atomic():
-        stats = InvitationStats.objects.select_for_update().get(user=user)
+        stats = InvitationStats.objects.select_for_update().get(id=1)
 
         if stats.remaining_invitations <= 0:
             raise ValidationError({
